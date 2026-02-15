@@ -2,7 +2,16 @@
 A complete, minimal, fully functional decoder-only LLM (nanoGPT-style) from absolute scratch in pure PyTorch. 
 No HF, no pre-built modules, no wrappers—just the essentials.
 
+**How to Run It**  
+1. Download data: `wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt`  
+2. `python train.py` (trains + saves).  
+3. `python generate.py` (samples text).  
+Expected sample (after training): Shakespearean dialogue with grammar, names, etc.  
 
+**Training Curve Expectations**: Loss starts ~4.0 (uniform), drops to ~1.6 val in 5000 steps. Generations improve from gibberish to fluent prose.
+
+
+## Training Curve
 ~~~console
 uv run python3 train.py
 Model created with 10.8M params
@@ -28,6 +37,7 @@ step 4500 | train loss 0.8706 | val loss 1.5613
 step 4750 | train loss 0.8442 | val loss 1.5871
 ~~~
 
+## Inference Result
 ~~~console
 uv run python3 generate.py
 Model created with 10.8M params
