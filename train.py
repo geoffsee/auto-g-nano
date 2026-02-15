@@ -1,48 +1,94 @@
 import torch
+import math
 from model import GPT
-from dataset import ShakespeareDataset
+from dataset import FineWebDataset
 
-# Config
-batch_size = 64
-block_size = 256
-max_iters = 5000
-eval_interval = 250
-eval_iters = 200
-learning_rate = 1e-3
+# --- Grok-style "100M-class" Config ---
+batch_size = 12       # Small batch for local machines, scale to 128+ on cluster
+block_size = 1024     # Modern context length
+n_embd = 768
+n_head = 12
+n_layer = 12
+n_kv_head = 4         # GQA: 3 query heads per KV head
+dropout = 0.0         # Modern LLMs often use 0 dropout if data is sufficient
+learning_rate = 6e-4
+weight_decay = 0.1
+max_iters = 10000     # Scale as needed
+eval_interval = 500
+eval_iters = 50
+warmup_iters = 200    # Cosine warmup
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-n_embd = 384
-n_head = 6
-n_layer = 6
-dropout = 0.2
 
 # Setup
-dataset = ShakespeareDataset('input.txt')
-model = GPT(dataset.vocab_size, n_embd, n_head, n_layer, block_size, dropout).to(device)
-optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+train_dataset = FineWebDataset(split='train')
+val_dataset = FineWebDataset(split='train') # Just for demo, usually 'validation'
+
+model = GPT(
+    vocab_size=train_dataset.vocab_size, 
+    n_embd=n_embd, 
+    n_head=n_head, 
+    n_layer=n_layer, 
+    block_size=block_size, 
+    dropout=dropout,
+    n_kv_head=n_kv_head
+).to(device)
+
+# Weight decay logic: only for 2D parameters (weights), not 1D (biases, norms)
+param_dict = {pn: p for pn, p in model.named_parameters()}
+param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
+decay_params = [p for n, p in param_dict.items() if p.dim() >= 2]
+nodecay_params = [p for n, p in param_dict.items() if p.dim() < 2]
+optim_groups = [
+    {'params': decay_params, 'weight_decay': weight_decay},
+    {'params': nodecay_params, 'weight_decay': 0.0}
+]
+optimizer = torch.optim.AdamW(optim_groups, lr=learning_rate, betas=(0.9, 0.95))
+
+# Cosine learning rate scheduler with warmup
+def get_lr(it):
+    if it < warmup_iters:
+        return learning_rate * it / warmup_iters
+    if it > max_iters:
+        return learning_rate * 0.1
+    decay_ratio = (it - warmup_iters) / (max_iters - warmup_iters)
+    coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
+    return learning_rate * (0.1 + 0.9 * coeff)
 
 @torch.no_grad()
 def estimate_loss():
     model.eval()
     losses = {'train': 0.0, 'val': 0.0}
-    for split in ['train', 'val']:
+    for split, ds in [('train', train_dataset), ('val', val_dataset)]:
         for _ in range(eval_iters):
-            X, Y = dataset.get_batch(batch_size, block_size, device, split)
+            X, Y = ds.get_batch(batch_size, block_size, device)
             _, loss = model(X, Y)
             losses[split] += loss.item()
         losses[split] /= eval_iters
     model.train()
     return losses
 
-# Train
+# Training Loop
+print(f"Starting Grok-style training on {device}...")
 for iter in range(max_iters):
+    # Update LR
+    lr = get_lr(iter)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+    # Eval
     if iter % eval_interval == 0:
         losses = estimate_loss()
-        print(f"step {iter:4d} | train loss {losses['train']:.4f} | val loss {losses['val']:.4f}")
+        print(f"step {iter:5d} | lr {lr:.2e} | train loss {losses['train']:.4f} | val loss {losses['val']:.4f}")
 
-    xb, yb = dataset.get_batch(batch_size, block_size, device, 'train')
+    # Forward/Backward
+    xb, yb = train_dataset.get_batch(batch_size, block_size, device)
     logits, loss = model(xb, yb)
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
+    
+    # Gradient clipping (standard for LLMs)
+    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+    
     optimizer.step()
 
 torch.save(model.state_dict(), 'model.pt')
