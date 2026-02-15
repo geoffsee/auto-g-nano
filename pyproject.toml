@@ -1,0 +1,9 @@
+[project]
+name = "auto-g-nano"
+version = "0.1.0"
+description = "nanoGPT clone, except it's not"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.4.2",
+    "torch>=2.10.0",
+]
