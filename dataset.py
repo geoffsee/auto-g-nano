@@ -1,8 +1,12 @@
 import torch
+import os
 
 class ShakespeareDataset:
     """Minimal char-level dataset for Tiny Shakespeare."""
     def __init__(self, file_path='input.txt'):
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Could not find dataset file at {file_path}. Please download it using the instructions in README.md")
+
         with open(file_path, 'r', encoding='utf-8') as f:
             text = f.read()
         chars = sorted(list(set(text)))

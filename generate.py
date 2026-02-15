@@ -3,9 +3,15 @@ from model import GPT
 from dataset import ShakespeareDataset
 
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-dataset = ShakespeareDataset('../input.txt')
+dataset = ShakespeareDataset('input.txt')
 model = GPT(dataset.vocab_size).to(device)  # uses defaults
-model.load_state_dict(torch.load('../model.pt'))
+
+model_path = 'model.pt'
+try:
+    model.load_state_dict(torch.load(model_path, map_location=device))
+except FileNotFoundError:
+    print(f"Warning: {model_path} not found. Using untrained weights.")
+
 model.eval()
 
 # Generate from prompt

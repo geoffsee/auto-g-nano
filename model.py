@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from huggingface_hub import PyTorchModelHubMixin
 
 class Head(nn.Module):
     """Single head of self-attention."""
@@ -66,7 +67,7 @@ class Block(nn.Module):
         x = x + self.ffwd(self.ln2(x))
         return x
 
-class GPT(nn.Module):
+class GPT(nn.Module, PyTorchModelHubMixin):
     """Full decoder-only GPT."""
     def __init__(self, vocab_size, n_embd=384, n_head=6, n_layer=6, block_size=256, dropout=0.2):
         super().__init__()

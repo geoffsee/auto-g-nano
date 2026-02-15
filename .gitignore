@@ -1,0 +1,16 @@
+.output.txt
+model.pt
+input.txt
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+
+# Hugging Face artifacts
+hf_model/
+
+# macOS
+.DS_Store
