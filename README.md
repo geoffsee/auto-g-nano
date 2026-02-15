@@ -29,12 +29,14 @@ A complete, minimal, and fully functional decoder-only Language Model (nanoGPT-s
 - **Modern Tooling**: Managed with `uv` for fast, reproducible environments.
 
 ## 🏗 Architecture
-The model is a standard decoder-only Transformer with:
-- **Token & Positional Embeddings**
-- **Causal Self-Attention**: Multi-head attention with masking to prevent looking into the future.
-- **Feed-Forward Networks**: Simple 2-layer MLP with ReLU activation.
-- **Layer Normalization**: Applied before each sub-layer (Pre-Norm).
+The model is a modernized Transformer (Llama-style) with:
+- **Token Embeddings**
+- **RoPE (Rotary Positional Embeddings)**: Replaces absolute positional embeddings for better length generalization.
+- **Grouped-Query Attention (GQA)**: Efficient attention mechanism that shares KV heads among query heads.
+- **SwiGLU Activation**: Used in the Feed-Forward Networks for improved performance.
+- **RMSNorm**: A more efficient alternative to LayerNorm applied before each sub-layer (Pre-Norm).
 - **Residual Connections**: Crucial for deep network stability.
+- **FlashAttention support**: Uses `scaled_dot_product_attention` for high-performance training and inference.
 
 | Hyperparameter | Value |
 | :--- | :--- |
