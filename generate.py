@@ -1,4 +1,5 @@
 import torch
+import os
 from model import GPT
 from dataset import FineWebDataset
 
@@ -25,24 +26,34 @@ model = GPT(
     n_kv_head=n_kv_head
 ).to(device)
 
-model_path = 'model.pt'
+model_path = 'model_instruct.pt' if torch.cuda.is_available() or torch.backends.mps.is_available() else 'model.pt'
+# Check which model exists, prefer instruct
+if not os.path.exists(model_path):
+    model_path = 'model.pt'
+
 try:
     state_dict = torch.load(model_path, map_location=device)
-    # Filter out potential prefix from DataParallel or similar if needed
     model.load_state_dict(state_dict)
     print(f"Successfully loaded {model_path}")
 except FileNotFoundError:
-    print(f"Warning: {model_path} not found. Using untrained weights.")
+    print(f"Warning: model weights not found. Using untrained weights.")
 
 model.eval()
 
 # Generate from prompt
 prompt = "In the future, artificial intelligence will"
-context = torch.tensor(dataset.encode(prompt), dtype=torch.long, device=device).unsqueeze(0)
+chat_mode = True # Set to True to use ChatML formatting
 
-print("Generating...")
+if chat_mode:
+    formatted_prompt = f"<|im_start|>system\nYou are a helpful assistant.<|im_end|>\n<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n"
+else:
+    formatted_prompt = prompt
+
+context = torch.tensor(dataset.encode(formatted_prompt), dtype=torch.long, device=device).unsqueeze(0)
+
+print(f"Generating (chat_mode={chat_mode})...")
 with torch.amp.autocast(device_type=device_type, dtype=ptdtype) if device_type != 'cpu' else torch.amp.autocast(device_type='cpu', enabled=False):
-    generated = model.generate(context, max_new_tokens=100, temperature=0.8)[0].tolist()
+    generated = model.generate(context, max_new_tokens=150, temperature=0.8)[0].tolist()
 print("-" * 30)
 print(dataset.decode(generated))
 print("-" * 30)

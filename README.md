@@ -88,23 +88,40 @@ Fetch the Tiny Shakespeare dataset:
 wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt
 ```
 
+## 🧠 Instruction Fine-Tuning
+The model supports Supervised Fine-Tuning (SFT) using the ChatML format.
+
+### Prompt Guidelines (ChatML)
+For best results with the instruct model, use the ChatML template:
+```text
+<|im_start|>system
+You are a helpful assistant.<|im_end|>
+<|im_start|>user
+{your_question}<|im_end|>
+<|im_start|>assistant
+```
+
+### How to Fine-Tune
+To transition the base model into an assistant, run the fine-tuning script:
+```bash
+uv run python finetune.py
+```
+This uses the `SmolTalk` dataset and a lower learning rate to adapt the 1.06B parameters to follow instructions.
+
 ---
 
-## 🏋️ Training
-Start training the model on the character-level dataset:
-```bash
-uv run python train.py
-```
-The script will automatically use `cuda`, `mps`, or `cpu` based on availability. The trained weights are saved to `model.pt`.
+## 🏋️ Training & Fine-Tuning
+- **Pre-training**: `uv run python train.py` (Trains on FineWeb-Edu)
+- **Fine-tuning**: `uv run python finetune.py` (Trains on SmolTalk Instruct)
 
 ---
 
 ## 🔮 Inference
-Generate text using the trained model:
+Generate text or chat with the model:
 ```bash
 uv run python generate.py
 ```
-Sample output should resemble Shakespearean dialogue after sufficient training.
+You can toggle `chat_mode = True` in `generate.py` to use the instruction-following template.
 
 ---
 
