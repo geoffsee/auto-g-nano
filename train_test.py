@@ -4,35 +4,26 @@ import time
 from model import GPT
 from dataset import FineWebDataset
 
-# --- 1B-Class Modern Config ---
-batch_size = 1         # Extremely small micro-batch for 1B model on local M4
-gradient_accumulation_steps = 128 # Effective batch size = 128 (approx 131k tokens)
+# --- Grok-style "100M-class" Config ---
+batch_size = 12       # Small micro-batch for local machines
+gradient_accumulation_steps = 8 # Effective batch size = 96
 block_size = 1024     # Modern context length
-n_embd = 2048
-n_head = 32
-n_layer = 14
-n_kv_head = 8         # GQA: 4 query heads per KV head
-dropout = 0.0
-learning_rate = 3e-4  # Lower LR for larger model
+n_embd = 768
+n_head = 12
+n_layer = 12
+n_kv_head = 4         # GQA: 3 query heads per KV head
+dropout = 0.0         # Modern LLMs often use 0 dropout if data is sufficient
+learning_rate = 6e-4
 weight_decay = 0.1
-max_iters = 50000     # 1B models need more steps
-eval_interval = 500
-eval_iters = 10
-warmup_iters = 1000
+max_iters = 20     # Scale as needed
+eval_interval = 10
+eval_iters = 50
+warmup_iters = 200    # Cosine warmup
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
-device_type = 'cuda' if 'cuda' in device else 'mps' if 'mps' in device else 'cpu'
-
-# M4 and modern GPUs handle bfloat16 well. Fallback to float16/32 if needed.
-if device_type == 'cuda':
-    dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16'
-elif device_type == 'mps':
-    # MPS supports bfloat16 on M2+ and recent macOS. Fallback to float16 for stability.
-    dtype = 'bfloat16'
-else:
-    dtype = 'float32'
-
+device_type = 'cuda' if 'cuda' in device else 'cpu' # for autocast
+# Use bfloat16 if available (A100+, H100), otherwise float16 (V100, T4, consumer GPUs)
+dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16'
 ptdtype = {'float32': torch.float32, 'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
-# Note: torch.amp.autocast for MPS is available in PyTorch 2.4+
 ctx = torch.amp.autocast(device_type=device_type, dtype=ptdtype) if device_type != 'cpu' else torch.amp.autocast(device_type='cpu', enabled=False)
 
 # Setup
@@ -86,8 +77,7 @@ def estimate_loss():
 
 # Training Loop
 print(f"Starting Grok-style training on {device} ({dtype})...")
-# GradScaler is essential for float16 to prevent underflow
-scaler = torch.amp.GradScaler(device_type, enabled=(dtype == 'float16'))
+scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
 
 t0 = time.time()
 for iter in range(max_iters):
@@ -123,9 +113,8 @@ for iter in range(max_iters):
         t1 = time.time()
         dt = t1 - t0
         t0 = t1
-        tokens_processed = batch_size * block_size * gradient_accumulation_steps * 10
-        tokens_per_sec = tokens_processed / dt
-        print(f"iter {iter:5d} | loss {loss.item()*gradient_accumulation_steps:.4f} | {tokens_per_sec:.0f} tok/s | {tokens_processed/1e6:.2f}M tokens/10-iters")
+        tokens_per_sec = (batch_size * block_size * gradient_accumulation_steps * 10) / dt
+        print(f"iter {iter:5d} | loss {loss.item()*gradient_accumulation_steps:.4f} | {tokens_per_sec:.0f} tok/s")
 
 torch.save(model.state_dict(), 'model.pt')
 print("Training complete! Model saved.")

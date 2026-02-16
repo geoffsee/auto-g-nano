@@ -4,6 +4,22 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-orange)](https://huggingface.co/models?search=auto-g-nano)
 
+~~~
+(auto-g-nano) ➜  auto-g-nano git:(auto-g-nano-2) uv run python3 generate.py                   
+Loading FineWeb-Edu (train)...
+Resolving data files: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2410/2410 [00:00<00:00, 94196.05it/s]
+Model created with 1.06B params
+Successfully loaded model.pt
+------------------------------
+In the future, artificial intelligence will scatter the light, making the images too noisy to be useful. Discovering almost 1,000 comets since SOHO's launch on December 2, 1995 is a testament to the skill of the LASCO team."
+SOHO successfully completed its primary mission in April 1998. It has enough fuel to remain on station to keep hunting comets for decades if the LASCO continues to function.
+For information about SOHO on the Internet, visit:
+Explore further: Long
+------------------------------
+(auto-g-nano) ➜  auto-g-nano git:(auto-g-nano-2) 
+~~~
+
+
 A complete, minimal, and fully functional decoder-only Language Model (nanoGPT-style) built from absolute scratch in pure PyTorch. No high-level abstractions, no pre-built modules—just the essentials of the Transformer architecture.
 
 ---
@@ -29,23 +45,27 @@ A complete, minimal, and fully functional decoder-only Language Model (nanoGPT-s
 - **Modern Tooling**: Managed with `uv` for fast, reproducible environments.
 
 ## 🏗 Architecture
-The model is a modernized Transformer (Llama-style) with:
-- **Token Embeddings**
-- **RoPE (Rotary Positional Embeddings)**: Replaces absolute positional embeddings for better length generalization.
-- **Grouped-Query Attention (GQA)**: Efficient attention mechanism that shares KV heads among query heads.
-- **SwiGLU Activation**: Used in the Feed-Forward Networks for improved performance.
-- **RMSNorm**: A more efficient alternative to LayerNorm applied before each sub-layer (Pre-Norm).
-- **Residual Connections**: Crucial for deep network stability.
+The model is a modernized Transformer (Nemotron-style) with:
+- **Token Embeddings**: Untied embeddings for maximum capacity.
+- **RoPE (Rotary Positional Embeddings)**: Using $\theta=500,000$ for better long-context handling.
+- **Grouped-Query Attention (GQA)**: Efficient attention mechanism (32 Q heads, 8 KV heads).
+- **Nemotron-style FFN**: SwiGLU activation with a 4x hidden dimension expansion.
+- **RMSNorm**: Applied before each sub-layer (Pre-Norm).
+- **Residual Connections**: Stable deep network architecture.
+- **GPT-2 Style Initialization**: Refined weight initialization with $1/\sqrt{2 \times layers}$ scaling for residual layers.
 - **FlashAttention support**: Uses `scaled_dot_product_attention` for high-performance training and inference.
 
 | Hyperparameter | Value |
 | :--- | :--- |
-| Parameters | ~10.8M |
-| Context Length | 256 |
-| Embedding Dim | 384 |
-| Heads | 6 |
-| Layers | 6 |
-| Dropout | 0.2 |
+| Parameters | ~1.06B |
+| Context Length | 1024 |
+| Embedding Dim | 2048 |
+| Heads | 32 |
+| KV Heads | 8 |
+| Layers | 14 |
+| Dropout | 0.0 |
+| Precision | Mixed (bfloat16/float16) |
+| Optimizer | AdamW + Cosine Decay |
 
 ---
 

@@ -16,7 +16,7 @@ class RMSNorm(nn.Module):
         output = self._norm(x.float()).type_as(x)
         return output * self.weight
 
-def precompute_freqs_cis(dim: int, end: int, theta: float = 10000.0):
+def precompute_freqs_cis(dim: int, end: int, theta: float = 500000.0):
     freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
     t = torch.arange(end, device=freqs.device)
     freqs = torch.outer(t, freqs).float()
@@ -52,6 +52,7 @@ class MultiHeadAttention(nn.Module):
         self.wk = nn.Linear(n_embd, self.n_kv_head * self.head_dim, bias=False)
         self.wv = nn.Linear(n_embd, self.n_kv_head * self.head_dim, bias=False)
         self.wo = nn.Linear(n_head * self.head_dim, n_embd, bias=False)
+        self.wo.RESIDUAL_SCALE_INIT = True
         
         self.dropout = dropout
         self.resid_dropout = nn.Dropout(dropout)
@@ -89,14 +90,15 @@ class MultiHeadAttention(nn.Module):
         return out
 
 class FeedForward(nn.Module):
-    """SwiGLU FFN."""
+    """Nemotron-style FFN (SwiGLU with 4x expansion)."""
     def __init__(self, n_embd, dropout):
         super().__init__()
-        hidden_dim = int(2 * (4 * n_embd) / 3)
-        # Llama-style SwiGLU: (xW1 * swish(xW2))W3
+        # Nemotron-4 uses 4x expansion
+        hidden_dim = 4 * n_embd
         self.w1 = nn.Linear(n_embd, hidden_dim, bias=False)
         self.w2 = nn.Linear(n_embd, hidden_dim, bias=False)
         self.w3 = nn.Linear(hidden_dim, n_embd, bias=False)
+        self.w3.RESIDUAL_SCALE_INIT = True
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
@@ -117,19 +119,38 @@ class Block(nn.Module):
         return x
 
 class GPT(nn.Module, PyTorchModelHubMixin):
-    """Full decoder-only Transformer (Llama-style)."""
+    """Full decoder-only Transformer (Nemotron-style)."""
     def __init__(self, vocab_size, n_embd=384, n_head=6, n_layer=6, block_size=256, dropout=0.2, n_kv_head=None):
         super().__init__()
+        self.n_layer = n_layer
         self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
         self.blocks = nn.ModuleList([Block(n_embd, n_head, block_size, dropout, n_kv_head) for _ in range(n_layer)])
         self.norm = RMSNorm(n_embd)
         self.lm_head = nn.Linear(n_embd, vocab_size, bias=False)
+        
+        # Nemotron-4 uses Untied Embeddings for better capacity at scale
+        # (Removed weight tying)
+        
         self.block_size = block_size
         
         # Precompute RoPE frequencies
         self.register_buffer("freqs_cis", precompute_freqs_cis(n_embd // n_head, block_size))
         
+        # Initialize weights
+        self.apply(self._init_weights)
+        
         print(f"Model created with {sum(p.numel() for p in self.parameters())/1e6:.1f}M params")
+
+    def _init_weights(self, module):
+        if isinstance(module, nn.Linear):
+            std = 0.02
+            if hasattr(module, 'RESIDUAL_SCALE_INIT'):
+                std *= (2 * self.n_layer) ** -0.5
+            torch.nn.init.normal_(module.weight, mean=0.0, std=std)
+            if module.bias is not None:
+                torch.nn.init.zeros_(module.bias)
+        elif isinstance(module, nn.Embedding):
+            torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, idx, targets=None):
         B, T = idx.shape
