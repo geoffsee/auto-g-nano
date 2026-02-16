@@ -58,7 +58,7 @@ class FineWebDataset:
         return self.enc.decode(l)
 
 class InstructDataset(FineWebDataset):
-    """Dataset for Instruction Fine-Tuning using ChatML format and SmolTalk."""
+    """Dataset for Instruction Fine-Tuning using ChatML format and OpenHermes-2.5."""
     def __init__(self, split='train', tokenizer_name='gpt2'):
         self.enc = tiktoken.get_encoding(tokenizer_name)
         self.vocab_size = self.enc.n_vocab

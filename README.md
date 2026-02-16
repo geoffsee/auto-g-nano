@@ -106,13 +106,13 @@ To transition the base model into an assistant, run the fine-tuning script:
 ```bash
 uv run python finetune.py
 ```
-This uses the `SmolTalk` dataset and a lower learning rate to adapt the 1.06B parameters to follow instructions.
+This uses the `OpenHermes-2.5` dataset and a lower learning rate to adapt the 1.06B parameters to follow instructions.
 
 ---
 
 ## 🏋️ Training & Fine-Tuning
 - **Pre-training**: `uv run python train.py` (Trains on FineWeb-Edu)
-- **Fine-tuning**: `uv run python finetune.py` (Trains on SmolTalk Instruct)
+- **Fine-tuning**: `uv run python finetune.py` (Trains on OpenHermes-2.5 Instruct)
 
 ---
 

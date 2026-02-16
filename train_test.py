@@ -76,7 +76,7 @@ def estimate_loss():
     return losses
 
 # Training Loop
-print(f"Starting Grok-style training on {device} ({dtype})...")
+print(f"Starting training on {device} ({dtype})...")
 scaler = torch.cuda.amp.GradScaler(enabled=(dtype == 'float16'))
 
 t0 = time.time()

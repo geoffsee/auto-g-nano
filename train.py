@@ -85,7 +85,7 @@ def estimate_loss():
     return losses
 
 # Training Loop
-print(f"Starting Grok-style training on {device} ({dtype})...")
+print(f"Starting training on {device} ({dtype})...")
 # GradScaler is essential for float16 to prevent underflow
 scaler = torch.amp.GradScaler(device_type, enabled=(dtype == 'float16'))
 
