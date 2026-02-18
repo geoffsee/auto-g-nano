@@ -9,126 +9,65 @@ A complete, minimal, and fully functional decoder-only Language Model (nanoGPT-s
 ---
 
 ## 📖 Table of Contents
-- [Features](#-features)
+- [About](#about)
+- [Models](#-models)
 - [Architecture](#-architecture)
-- [Quick Start](#-quick-start)
-- [Training](#-training)
-- [Inference](#-inference)
-- [Hugging Face Integration](#-hugging-face-integration)
-- [Results](#-results)
-- [Acknowledgments](#-acknowledgments)
+- [Getting Started](#-getting-started)
 - [License](#-license)
 
 ---
 
-## ✨ Features
-- **Pure PyTorch**: Implemented using basic `nn.Module` and `functional` operations.
-- **NanoGPT Style**: Focused on simplicity and readability, ideal for learning.
-- **Character-level Tokenization**: Simple and effective for small datasets like Tiny Shakespeare.
-- **Hugging Face Hub Support**: Built-in scripts to push and pull models from the Hub.
-- **Modern Tooling**: Managed with `uv` for fast, reproducible environments.
+## About
+
+This repository contains multiple trained decoder-only Transformer models of varying sizes, all trained on the Tiny Shakespeare dataset using character-level tokenization. Each model is implemented in pure PyTorch from scratch with no high-level abstractions—just the fundamentals of the Transformer architecture.
+
+For implementation details, training scripts, and inference code, check out the branch corresponding to your desired model size.
+
+---
+
+## 🤖 Models
+
+All models are available on the Hugging Face Hub and in git branches:
+
+| Model | Parameters | Context | Embedding | Heads | Layers | Branch | HF Hub |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **auto-g-nano** | 10.8M | 256 | 384 | 6 | 6 | [`auto-g-nano-10m`](https://github.com/williamseemueller/auto-g-nano/tree/auto-g-nano-10m) | [🤗 Hub](https://huggingface.co/models?search=auto-g-nano) |
+| **auto-g-nano-153M** | 153M | 256 | 768 | 12 | 12 | [`auto-g-nano-153M`](https://github.com/williamseemueller/auto-g-nano/tree/auto-g-nano-153M) | [🤗 Hub](https://huggingface.co/models?search=auto-g-nano) |
+| **auto-g-nano-1B** | 1B | 256 | 1024 | 16 | 24 | [`auto-g-nano-1b`](https://github.com/williamseemueller/auto-g-nano/tree/auto-g-nano-1b) | [🤗 Hub](https://huggingface.co/models?search=auto-g-nano) |
+| **auto-g-nano-1B-CoreML** | 1B | 256 | 1024 | 16 | 24 | [`auto-g-nano-1b-coreml`](https://github.com/williamseemueller/auto-g-nano/tree/auto-g-nano-1b-coreml) | [🤗 Hub](https://huggingface.co/models?search=auto-g-nano) |
+
+**To use any model:** Check out the corresponding branch to find training/inference code and the model weights.
+
+---
 
 ## 🏗 Architecture
-The model is a standard decoder-only Transformer with:
+
+All models follow the same decoder-only Transformer architecture:
 - **Token & Positional Embeddings**
 - **Causal Self-Attention**: Multi-head attention with masking to prevent looking into the future.
-- **Feed-Forward Networks**: Simple 2-layer MLP with ReLU activation.
+- **Feed-Forward Networks**: 2-layer MLP with ReLU activation.
 - **Layer Normalization**: Applied before each sub-layer (Pre-Norm).
 - **Residual Connections**: Crucial for deep network stability.
 
-| Hyperparameter | Value |
-| :--- | :--- |
-| Parameters | ~10.8M |
-| Context Length | 256 |
-| Embedding Dim | 384 |
-| Heads | 6 |
-| Layers | 6 |
-| Dropout | 0.2 |
-
 ---
 
-## 🚀 Quick Start
+## 🚀 Getting Started
 
-### Prerequisites
-- Python 3.11+
-- [uv](https://github.com/astral-sh/uv) (recommended)
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/williamseemueller/auto-g-nano.git
+   cd auto-g-nano
+   ```
 
-### Installation
-```bash
-git clone https://github.com/your-username/auto-g-nano.git
-cd auto-g-nano
-uv sync
-```
+2. **Check out your desired model branch:**
+   ```bash
+   git checkout auto-g-nano-10m  # or auto-g-nano-153M, auto-g-nano-1b, etc.
+   ```
 
-### Download Dataset
-Fetch the Tiny Shakespeare dataset:
-```bash
-wget https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt
-```
+3. **Install dependencies and run training/inference:**
+   - Each branch contains its own `README.md` with instructions for training, inference, and deployment.
 
 ---
-
-## 🏋️ Training
-Start training the model on the character-level dataset:
-```bash
-uv run python train.py
-```
-The script will automatically use `cuda`, `mps`, or `cpu` based on availability. The trained weights are saved to `model.pt`.
-
----
-
-## 🔮 Inference
-Generate text using the trained model:
-```bash
-uv run python generate.py
-```
-Sample output should resemble Shakespearean dialogue after sufficient training.
-
----
-
-## 🤗 Hugging Face Integration
-
-### Publishing
-Upload your model and code to the Hugging Face Hub:
-```bash
-uv run python publish.py <your-username>/<your-model-name>
-```
-
-### Loading
-Load a published model directly in your code:
-```python
-from model import GPT
-model = GPT.from_pretrained("<your-username>/<your-model-name>")
-```
-
----
-
-## 📊 Results
-
-### Training Curve
-Expect the loss to start around ~4.3 and drop to ~1.5 after 5000 iterations.
-```console
-step    0 | train loss 4.2932 | val loss 4.2972
-step 1000 | train loss 1.3553 | val loss 1.5904
-step 2500 | train loss 1.0986 | val loss 1.4848
-step 5000 | train loss 0.8442 | val loss 1.5871
-```
-
-### Sample Output
-> **LADY GREY:**
-> And their I know before I descend.
-> 
-> **KING EDWARD IV:**
-> But what prophecy they love to do thee for thee?
-> 
-> **GLOUCESTER:**
-> The bridge makes her majesty to be at once.
-
----
-
-## 🙏 Acknowledgments
-- Inspired by Andrej Karpathy's [nanoGPT](https://github.com/karpathy/nanoGPT).
-- Dataset provided by the Tiny Shakespeare corpus.
 
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
