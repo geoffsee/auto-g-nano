@@ -34,18 +34,21 @@ class FineWebDataset:
         total_required = batch_size * (block_size + 1)
         self._fill_buffer(total_required)
         
-        start_indices = torch.randint(0, len(self.buffer) - block_size - 1, (batch_size,))
+        # Select random starting indices
+        start_indices = np.random.randint(0, len(self.buffer) - block_size - 1, (batch_size,))
         
-        x_list = []
-        y_list = []
+        # Batching tokens more efficiently
+        x_data = []
+        y_data = []
         for i in start_indices:
-            chunk = self.buffer[i:i+block_size+1]
-            x_list.append(torch.tensor(chunk[:-1], dtype=torch.long))
-            y_list.append(torch.tensor(chunk[1:], dtype=torch.long))
+            x_data.append(self.buffer[i : i + block_size])
+            y_data.append(self.buffer[i + 1 : i + block_size + 1])
             
-        x = torch.stack(x_list).to(device)
-        y = torch.stack(y_list).to(device)
+        # Create tensors directly from lists
+        x = torch.tensor(x_data, dtype=torch.long, device=device)
+        y = torch.tensor(y_data, dtype=torch.long, device=device)
         
+        # Clean up buffer if it grows too large
         if len(self.buffer) > 1_000_000:
             self.buffer = self.buffer[500_000:]
             

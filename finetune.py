@@ -4,25 +4,25 @@ import time
 from model import GPT
 from dataset import InstructDataset
 
-# --- 1B-Class Fine-Tuning Config ---
-batch_size = 1         
-gradient_accumulation_steps = 128 
+# --- 1B-Class Fine-Tuning Config (Optimized for Apple SOC) ---
+batch_size = 32         
+gradient_accumulation_steps = 4 
 block_size = 1024     
 n_embd = 2048
 n_head = 32
 n_layer = 14
 n_kv_head = 8         
 dropout = 0.0
-learning_rate = 5e-5  # Lower LR for fine-tuning
+learning_rate = 5e-5  
 weight_decay = 0.1
-max_iters = 5000      # SFT is typically much shorter than pre-training
+max_iters = 5000      
 eval_interval = 250
 eval_iters = 10
 warmup_iters = 100
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 device_type = 'cuda' if 'cuda' in device else 'mps' if 'mps' in device else 'cpu'
 
-# Precision
+# M4 and modern GPUs handle bfloat16 well.
 if device_type == 'cuda':
     dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16'
 elif device_type == 'mps':

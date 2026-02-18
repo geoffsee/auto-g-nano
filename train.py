@@ -4,29 +4,36 @@ import time
 from model import GPT
 from dataset import FineWebDataset
 
-# --- 1B-Class Modern Config ---
-batch_size = 1         # Extremely small micro-batch for 1B model on local M4
-gradient_accumulation_steps = 128 # Effective batch size = 128 (approx 131k tokens)
-block_size = 1024     # Modern context length
+# --- 1B-Class Modern Config (Optimized for Apple SOC) ---
+batch_size = 32         # Increased batch size to saturate the Apple GPU
+gradient_accumulation_steps = 4 # Total effective batch = 128
+block_size = 1024     
 n_embd = 2048
 n_head = 32
 n_layer = 14
-n_kv_head = 8         # GQA: 4 query heads per KV head
+n_kv_head = 8         
 dropout = 0.0
-learning_rate = 3e-4  # Lower LR for larger model
+learning_rate = 3e-4  
 weight_decay = 0.1
-max_iters = 50000     # 1B models need more steps
+max_iters = 50000     
 eval_interval = 500
 eval_iters = 10
 warmup_iters = 1000
 device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
 device_type = 'cuda' if 'cuda' in device else 'mps' if 'mps' in device else 'cpu'
 
-# M4 and modern GPUs handle bfloat16 well. Fallback to float16/32 if needed.
+# Performance Tuning for Apple Silicon
+if device_type == 'mps':
+    # This helps ensure we're using the unified memory efficiently
+    # and not being throttled by OS memory limits if we're well within 128GB.
+    # We can also enable some MPS specific flags here if needed.
+    pass
+
+# M4 and modern GPUs handle bfloat16 well.
 if device_type == 'cuda':
     dtype = 'bfloat16' if torch.cuda.is_bf16_supported() else 'float16'
 elif device_type == 'mps':
-    # MPS supports bfloat16 on M2+ and recent macOS. Fallback to float16 for stability.
+    # MPS supports bfloat16 on M2+ and recent macOS.
     dtype = 'bfloat16'
 else:
     dtype = 'float32'

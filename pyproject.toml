@@ -10,4 +10,6 @@ dependencies = [
     "safetensors",
     "tiktoken",
     "datasets",
+    "mlx>=0.30.6",
+    "coremltools>=9.0",
 ]
