@@ -71,23 +71,14 @@ class MultiHeadAttention(nn.Module):
 
         xq, xk = apply_rotary_emb(xq, xk, cos, sin)
 
-        # (B, nh, T, hs)
-        xq = xq.transpose(0, 2, 1, 3)
-        xk = xk.transpose(0, 2, 1, 3)
-        xv = xv.transpose(0, 2, 1, 3)
-
-        if self.n_groups > 1:
-            xk = mx.repeat(xk, self.n_groups, axis=1)
-            xv = mx.repeat(xv, self.n_groups, axis=1)
-
-        # Scaled dot product attention
-        scores = (xq @ xk.transpose(0, 1, 3, 2)) * self.scale
-        if mask is not None:
-            scores = scores + mask
-        
-        scores = mx.softmax(scores.astype(mx.float32), axis=-1).astype(xq.dtype)
-        scores = self.dropout(scores)
-        out = scores @ xv
+        # Use fast scaled dot product attention from MLX
+        out = mx.fast.scaled_dot_product_attention(
+            xq.transpose(0, 2, 1, 3), 
+            xk.transpose(0, 2, 1, 3), 
+            xv.transpose(0, 2, 1, 3), 
+            scale=self.scale, 
+            mask=mask
+        )
 
         out = out.transpose(0, 2, 1, 3).reshape(B, T, C)
         return self.wo(out)

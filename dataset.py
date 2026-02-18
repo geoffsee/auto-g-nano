@@ -35,22 +35,25 @@ class FineWebDataset:
         self._fill_buffer(total_required)
         
         # Select random starting indices
+        # Optimization: use numpy for fast random sampling
         start_indices = np.random.randint(0, len(self.buffer) - block_size - 1, (batch_size,))
         
-        # Batching tokens more efficiently
-        x_data = []
-        y_data = []
-        for i in start_indices:
-            x_data.append(self.buffer[i : i + block_size])
-            y_data.append(self.buffer[i + 1 : i + block_size + 1])
+        # Batching tokens more efficiently by slicing
+        buffer_np = np.array(self.buffer, dtype=np.int32)
+        x_data = np.stack([buffer_np[i : i + block_size] for i in start_indices])
+        y_data = np.stack([buffer_np[i + 1 : i + block_size + 1] for i in start_indices])
             
-        # Create tensors directly from lists
+        # Create tensors/arrays
+        if device == 'cpu' or device is None:
+            # For MLX compatibility via numpy
+            return torch.from_numpy(x_data.astype(np.int64)), torch.from_numpy(y_data.astype(np.int64))
+        
         x = torch.tensor(x_data, dtype=torch.long, device=device)
         y = torch.tensor(y_data, dtype=torch.long, device=device)
         
         # Clean up buffer if it grows too large
-        if len(self.buffer) > 1_000_000:
-            self.buffer = self.buffer[500_000:]
+        if len(self.buffer) > 200_000:
+            self.buffer = self.buffer[100_000:]
             
         return x, y
 

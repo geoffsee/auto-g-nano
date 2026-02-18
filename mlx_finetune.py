@@ -24,10 +24,6 @@ eval_interval = 250
 eval_iters = 10
 warmup_iters = 100
 
-# Set model precision to bfloat16 for faster training on Apple Silicon
-mx.set_default_device(mx.gpu)
-precision = mx.bfloat16
-
 # Setup Dataset
 train_dataset = InstructDataset(split='train')
 val_dataset = InstructDataset(split='train')
@@ -42,7 +38,6 @@ model = GPT(
     dropout=dropout,
     block_size=block_size
 )
-model.set_dtype(precision)
 
 # Load pre-trained weights if available (converting from PyTorch model.pt)
 model_path = 'model.pt'

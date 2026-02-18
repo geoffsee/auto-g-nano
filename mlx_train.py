@@ -62,19 +62,16 @@ def get_lr(it):
     coeff = 0.5 * (1.0 + math.cos(math.pi * decay_ratio))
     return learning_rate * (0.1 + 0.9 * coeff)
 
-# Loss Function
-def loss_fn(model, x, y):
+def loss_fn(x, y):
     logits, loss = model(x, y)
     return loss
 
-# State for gradient accumulation
-state = [model.state, optimizer.state]
+loss_and_grad_fn = nn.value_and_grad(model, loss_fn)
 
 @mx.compile
-def train_step(model, x, y, optimizer):
-    loss, grads = nn.value_and_grad(model, loss_fn)(model, x, y)
-    optimizer.update(model, grads)
-    return loss
+def train_step(x, y):
+    loss, grads = loss_and_grad_fn(x, y)
+    return loss, grads
 
 def get_batch_mlx(ds, batch_size, block_size):
     # Reuse the PyTorch-based dataset but convert to MLX
@@ -96,19 +93,18 @@ for iter in range(max_iters):
         val_loss = 0
         for _ in range(eval_iters):
             x, y = get_batch_mlx(val_dataset, batch_size, block_size)
-            val_loss += loss_fn(model, x, y).item()
+            val_loss += loss_fn(x, y).item()
         val_loss /= eval_iters
         print(f"step {iter:5d} | lr {lr:.2e} | val loss {val_loss:.4f}")
         model.train()
 
     # Training step with grad accumulation
     accumulated_loss = 0
+    
     for _ in range(gradient_accumulation_steps):
         x, y = get_batch_mlx(train_dataset, batch_size, block_size)
-        # MLX value_and_grad handles the gradient calculation
-        # For simplicity in this script we don't do explicit accumulation 
-        # but we could by summing grads. MLX is fast enough to do more steps.
-        loss = train_step(model, x, y, optimizer)
+        loss, grads = train_step(x, y)
+        optimizer.update(model, grads)
         mx.eval(loss, model.parameters(), optimizer.state)
         accumulated_loss += loss.item()
 
